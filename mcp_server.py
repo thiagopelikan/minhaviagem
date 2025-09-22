@@ -60,80 +60,83 @@ def mcp_tool_roteiro():
     print(f"[LOG] dialogState: {dialog_state}")
     print(f"[LOG] Valor final usado para busca no roteiro: {date_slot}")
 
-    # Suporte ao Dialog.DelegateRequest (Alexa Conversations/APL)
-    if data.get("request", {}).get("type") == "Dialog.DelegateRequest":
-        delegate_request = {
-            "version": "1.0",
-            "response": {
-                "directives": [
-                    {
-                        "type": "Dialog.DelegateRequest",
-                        "target": "skill",
-                        "period": {"until": "EXPLICIT_RETURN"},
-                        "updatedRequest": data["request"].get("updatedRequest", data["request"])
-                    }
-                ],
-                "shouldEndSession": False,
-                "type": "_DEFAULT_RESPONSE"
-            },
-            "sessionAttributes": {}
-        }
-        return jsonify(delegate_request)
 
-    # Se for RoteiroIntent e slot estiver presente, sempre responde com roteiro
-    if intent_name == "RoteiroIntent" and date_slot:
-        roteiro = get_roteiro_by_date(date_slot)
-        print(f"[LOG] Roteiro encontrado: {roteiro}")
-        if roteiro:
-            return jsonify({
+        # Suporte ao Dialog.DelegateRequest (Alexa Conversations/APL)
+        if data.get("request", {}).get("type") == "Dialog.DelegateRequest":
+            delegate_request = {
                 "version": "1.0",
                 "response": {
-                    "outputSpeech": {
-                        "type": "PlainText",
-                        "text": roteiro
-                    },
-                    "shouldEndSession": True
-                }
-            })
-        else:
-            return jsonify({
+                    "directives": [
+                        {
+                            "type": "Dialog.DelegateRequest",
+                            "target": "skill",
+                            "period": {"until": "EXPLICIT_RETURN"},
+                            "updatedRequest": data["request"].get("updatedRequest", data["request"])
+                        }
+                    ],
+                    "shouldEndSession": False,
+                    "type": "_DEFAULT_RESPONSE"
+                },
+                "sessionAttributes": {}
+            }
+            return jsonify(delegate_request)
+
+        # Se for RoteiroIntent (case insensitive) e slot estiver presente, sempre responde com roteiro
+        if intent_name and intent_name.strip().lower() == "roteirointent".lower() and date_slot:
+            roteiro = get_roteiro_by_date(date_slot)
+            print(f"[LOG] Roteiro encontrado: {roteiro}")
+            if roteiro:
+                return jsonify({
+                    "version": "1.0",
+                    "response": {
+                        "outputSpeech": {
+                            "type": "PlainText",
+                            "text": roteiro
+                        },
+                        "shouldEndSession": True
+                    }
+                })
+            else:
+                return jsonify({
+                    "version": "1.0",
+                    "response": {
+                        "outputSpeech": {
+                            "type": "PlainText",
+                            "text": "Desculpe, não tenho roteiro para essa data. Diga uma data entre 10 e 25 de outubro de 2025."
+                        },
+                        "shouldEndSession": False
+                    }
+                })
+
+        # Se o diálogo não estiver completo, delega para Alexa continuar
+        if dialog_state != "COMPLETED":
+            print(f"[LOG] Delegando para Alexa. intent_name={intent_name}, date_slot={date_slot}, dialog_state={dialog_state}")
+            delegate_response = {
                 "version": "1.0",
                 "response": {
-                    "outputSpeech": {
-                        "type": "PlainText",
-                        "text": "Desculpe, não tenho roteiro para essa data. Diga uma data entre 10 e 25 de outubro de 2025."
-                    },
+                    "directives": [
+                        {
+                            "type": "Dialog.Delegate"
+                        }
+                    ],
                     "shouldEndSession": False
                 }
-            })
+            }
+            return jsonify(delegate_response)
 
-    # Se o diálogo não estiver completo, delega para Alexa continuar
-    if dialog_state != "COMPLETED":
-        delegate_response = {
+        # Fallback: resposta padrão para intents desconhecidos ou dados ausentes
+        print(f"[LOG] Fallback acionado. intent_name={intent_name}, date_slot={date_slot}, dialog_state={dialog_state}")
+        alexa_response = {
             "version": "1.0",
             "response": {
-                "directives": [
-                    {
-                        "type": "Dialog.Delegate"
-                    }
-                ],
-                "shouldEndSession": False
+                "outputSpeech": {
+                    "type": "PlainText",
+                    "text": f"Desculpe, não entendi o pedido. intent_name={intent_name}, date_slot={date_slot}, dialog_state={dialog_state}"
+                },
+                "shouldEndSession": True
             }
         }
-        return jsonify(delegate_response)
-
-    # Fallback: resposta padrão para intents desconhecidos ou dados ausentes
-    alexa_response = {
-        "version": "1.0",
-        "response": {
-            "outputSpeech": {
-                "type": "PlainText",
-                "text": "Desculpe, não entendi o pedido."
-            },
-            "shouldEndSession": True
-        }
-    }
-    return jsonify(alexa_response)
+        return jsonify(alexa_response)
 
 VIAGEM_DATA = datetime(2025, 10, 10)
 
