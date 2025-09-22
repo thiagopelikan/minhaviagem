@@ -47,10 +47,17 @@ def mcp_tool_roteiro():
     dialog_state = data.get("request", {}).get("dialogState")
     # Aceita tanto 'date' (Alexa padrão) quanto 'data' (personalizado)
     date_slot = None
-    if slots.get("date") and slots["date"].get("value"):
-        date_slot = slots["date"]["value"]
-    elif slots.get("data") and slots["data"].get("value"):
-        date_slot = slots["data"]["value"]
+    # Busca valor do slot em 'value' ou 'slotValue.value', normalizando espaços
+    if slots.get("date"):
+        if slots["date"].get("value"):
+            date_slot = str(slots["date"]["value"]).strip()
+        elif slots["date"].get("slotValue") and slots["date"]["slotValue"].get("value"):
+            date_slot = str(slots["date"]["slotValue"]["value"]).strip()
+    elif slots.get("data"):
+        if slots["data"].get("value"):
+            date_slot = str(slots["data"]["value"]).strip()
+        elif slots["data"].get("slotValue") and slots["data"]["slotValue"].get("value"):
+            date_slot = str(slots["data"]["slotValue"]["value"]).strip()
 
     # Suporte ao Dialog.DelegateRequest (Alexa Conversations/APL)
     if data.get("request", {}).get("type") == "Dialog.DelegateRequest":
