@@ -26,7 +26,9 @@ import json
 def get_roteiro_by_date(date_str):
     try:
         with open("roteiro.json", "r") as f:
-            roteiros = json.load(f)
+                print(f"[LOG] get_roteiro_by_date chamada com date: {date_str}")
+                roteiros = json.load(f)
+                print(f"[LOG] roteiros.json carregado: {roteiros}")
         return roteiros.get(date_str)
     except Exception as e:
         print("[LOG] Erro ao ler roteiro.json:", e)
@@ -108,6 +110,7 @@ def mcp_tool_roteiro():
                     }
                 })
         print(f"[LOG] Checagem dialogState: dialog_state={dialog_state}")
+        print(f"[LOG] Resultado da busca do roteiro: {roteiro}")
         if dialog_state != "COMPLETED":
             print(f"[LOG] Delegando para Alexa. intent_name={intent_name}, date_slot={date_slot}, dialog_state={dialog_state}")
             delegate_response = {
