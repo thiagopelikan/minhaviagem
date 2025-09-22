@@ -61,6 +61,7 @@ def mcp_tool_roteiro():
     print(f"[LOG] Valor final usado para busca no roteiro: {date_slot}")
 
 
+    print(f"[LOG] Checagem Dialog.DelegateRequest: {data.get('request', {}).get('type')}")
     # Suporte ao Dialog.DelegateRequest (Alexa Conversations/APL)
     if data.get("request", {}).get("type") == "Dialog.DelegateRequest":
         delegate_request = {
@@ -81,6 +82,7 @@ def mcp_tool_roteiro():
         }
         return jsonify(delegate_request)
 
+    print(f"[LOG] Checagem RoteiroIntent: intent_name={intent_name}, date_slot={date_slot}")
     # Se for RoteiroIntent (case insensitive) e slot estiver presente, sempre responde com roteiro
     if intent_name and intent_name.strip().lower() == "roteirointent".lower() and date_slot:
         roteiro = get_roteiro_by_date(date_slot)
@@ -108,6 +110,7 @@ def mcp_tool_roteiro():
                 }
             })
 
+    print(f"[LOG] Checagem dialogState: dialog_state={dialog_state}")
     # Se o diálogo não estiver completo, delega para Alexa continuar
     if dialog_state != "COMPLETED":
         print(f"[LOG] Delegando para Alexa. intent_name={intent_name}, date_slot={date_slot}, dialog_state={dialog_state}")
