@@ -34,6 +34,20 @@ def mcp_tool_minha_viagem():
             slots = req.get('intent', {}).get('slots', {})
             dialog_state = req.get('dialogState')
         print(f"[LOG] Intent detectado: {intent_name}")
+        # Resposta personalizada para LaunchRequest
+        request_type = data.get("request", {}).get("type")
+        if request_type == "LaunchRequest":
+            alexa_response = {
+                "version": "1.0",
+                "response": {
+                    "outputSpeech": {
+                        "type": "PlainText",
+                        "text": "Bem-vindo à Skill Dias para Viagem! Você pode perguntar quantos dias faltam para a viagem ou pedir o roteiro de qualquer dia entre 10 e 25 de outubro de 2025."
+                    },
+                    "shouldEndSession": False
+                }
+            }
+            return jsonify(alexa_response)
         # Roteia para dias_para_viagem
         if intent_name and intent_name.strip().lower() == "diasparaviagem":
             print("[LOG] Redirecionando para dias_para_viagem")
