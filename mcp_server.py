@@ -11,8 +11,74 @@ MCP_TOOLS = [
         "description": "Retorna quantos dias faltam para a viagem (10/10/2025)",
         "endpoint": "/mcp/tool/dias_para_viagem",
         "method": "POST"
+    },
+    {
+        "name": "roteiro",
+        "description": "Retorna o roteiro do dia informado (de 10/10/2025 a 25/10/2025)",
+        "endpoint": "/mcp/tool/roteiro",
+        "method": "POST"
     }
 ]
+# Novo endpoint para listar as tools MCP
+import json
+
+def get_roteiro_by_date(date_str):
+    try:
+        with open("roteiro.json", "r") as f:
+            roteiros = json.load(f)
+        return roteiros.get(date_str)
+    except Exception as e:
+        print("[LOG] Erro ao ler roteiro.json:", e)
+        return None
+
+# Endpoint do roteiro
+@app.route('/mcp/tool/roteiro', methods=['POST'])
+def mcp_tool_roteiro():
+    data = request.get_json(force=True)
+    print("[LOG] JSON recebido da Alexa (roteiro):", data)
+    request_type = data.get("request", {}).get("type")
+    intent_name = data.get("request", {}).get("intent", {}).get("name")
+    slots = data.get("request", {}).get("intent", {}).get("slots", {})
+    date_slot = slots.get("data", {}).get("value") if slots.get("data") else None
+
+    # Se não informar data, pede para usuário informar
+    if not date_slot:
+        alexa_response = {
+            "version": "1.0",
+            "response": {
+                "outputSpeech": {
+                    "type": "PlainText",
+                    "text": "Qual data da viagem você gostaria de saber o roteiro? Diga uma data entre 10 e 25 de outubro de 2025."
+                },
+                "shouldEndSession": False
+            }
+        }
+        return jsonify(alexa_response)
+
+    roteiro = get_roteiro_by_date(date_slot)
+    if roteiro:
+        alexa_response = {
+            "version": "1.0",
+            "response": {
+                "outputSpeech": {
+                    "type": "PlainText",
+                    "text": roteiro
+                },
+                "shouldEndSession": True
+            }
+        }
+    else:
+        alexa_response = {
+            "version": "1.0",
+            "response": {
+                "outputSpeech": {
+                    "type": "PlainText",
+                    "text": "Desculpe, não tenho roteiro para essa data. Diga uma data entre 10 e 25 de outubro de 2025."
+                },
+                "shouldEndSession": False
+            }
+        }
+    return jsonify(alexa_response)
 
 VIAGEM_DATA = datetime(2025, 10, 10)
 
@@ -44,7 +110,7 @@ def mcp_tool_dias_para_viagem():
             "response": {
                 "outputSpeech": {
                     "type": "PlainText",
-                    "text": "Bem-vindo à Skill Dias para Viagem! Pergunte quantos dias faltam para a viagem."
+                    "text": "Bem-vindo à Skill Dias para Viagem! Você pode perguntar quantos dias faltam para a viagem ou pedir o roteiro de qualquer dia entre 10 e 25 de outubro de 2025."
                 },
                 "shouldEndSession": False
             }
