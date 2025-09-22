@@ -1,3 +1,4 @@
+print('[LOG] MCP_SERVER.PY INICIADO')
 
 from flask import Flask, request, jsonify
 from datetime import datetime
