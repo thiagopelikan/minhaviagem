@@ -1,3 +1,56 @@
+# Endpoint centralizador para Alexa
+@app.route('/mcp/tool/minha_viagem', methods=['POST'])
+def mcp_tool_minha_viagem():
+    print("[LOG] Entrou na função mcp_tool_minha_viagem")
+    try:
+        data = request.get_json(force=True)
+        print("[LOG] JSON recebido da Alexa (centralizador):", data)
+        # Detecta intent
+        intent_name = None
+        slots = {}
+        dialog_state = None
+        if 'request' in data:
+            req = data['request']
+            intent_name = req.get('intent', {}).get('name')
+            slots = req.get('intent', {}).get('slots', {})
+            dialog_state = req.get('dialogState')
+        print(f"[LOG] Intent detectado: {intent_name}")
+        # Roteia para dias_para_viagem
+        if intent_name and intent_name.strip().lower() == "dias_para_viagem":
+            print("[LOG] Redirecionando para dias_para_viagem")
+            # Reaproveita função existente
+            return mcp_tool_dias_para_viagem()
+        # Roteia para roteiro
+        elif intent_name and intent_name.strip().lower() == "roteirointent":
+            print("[LOG] Redirecionando para roteiro")
+            return mcp_tool_roteiro()
+        # Fallback
+        else:
+            print(f"[LOG] Intent não reconhecido: {intent_name}")
+            alexa_response = {
+                "version": "1.0",
+                "response": {
+                    "outputSpeech": {
+                        "type": "PlainText",
+                        "text": "Desculpe, não entendi o pedido."
+                    },
+                    "shouldEndSession": True
+                }
+            }
+            return jsonify(alexa_response)
+    except Exception as e:
+        print(f"[LOG] Erro inesperado em mcp_tool_minha_viagem: {e}")
+        alexa_response = {
+            "version": "1.0",
+            "response": {
+                "outputSpeech": {
+                    "type": "PlainText",
+                    "text": f"Erro interno: {e}"
+                },
+                "shouldEndSession": True
+            }
+        }
+        return jsonify(alexa_response)
 print('[LOG] MCP_SERVER.PY INICIADO')
 
 from flask import Flask, request, jsonify
