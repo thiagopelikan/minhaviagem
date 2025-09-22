@@ -34,6 +34,11 @@ def get_roteiro_by_date(date_str):
 # Endpoint do roteiro
 @app.route('/mcp/tool/roteiro', methods=['POST'])
 def mcp_tool_roteiro():
+    # LOG DETALHADO PARA DEPURAÇÃO
+    intent_name = data.get("request", {}).get("intent", {}).get("name")
+    print(f"[LOG] Intent recebido: {intent_name}")
+    print(f"[LOG] Slot date: {slots.get('date', {}).get('value')}")
+    print(f"[LOG] dialogState: {data.get('request', {}).get('dialogState')}")
     data = request.get_json(force=True)
     print("[LOG] JSON recebido da Alexa (roteiro):", data)
     request_type = data.get("request", {}).get("type")
