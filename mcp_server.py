@@ -82,8 +82,9 @@ def mcp_tool_roteiro():
         }
         return jsonify(delegate_response)
 
-    # Se informar data e diálogo estiver completo, responde com roteiro
-    if date_slot:
+    # Se informar data e diálogo estiver completo, responde com roteiro (tratando explicitamente o intent)
+    intent_name = data.get("request", {}).get("intent", {}).get("name")
+    if intent_name == "RoteiroIntent" and date_slot:
         roteiro = get_roteiro_by_date(date_slot)
         if roteiro:
             alexa_response = {
@@ -109,15 +110,15 @@ def mcp_tool_roteiro():
             }
         return jsonify(alexa_response)
 
-    # Fallback: pede para informar data
+    # Fallback: resposta padrão para intents desconhecidos ou dados ausentes
     alexa_response = {
         "version": "1.0",
         "response": {
             "outputSpeech": {
                 "type": "PlainText",
-                "text": "Qual data da viagem você gostaria de saber o roteiro? Diga uma data entre 10 e 25 de outubro de 2025."
+                "text": "Desculpe, não entendi o pedido."
             },
-            "shouldEndSession": False
+            "shouldEndSession": True
         }
     }
     return jsonify(alexa_response)
