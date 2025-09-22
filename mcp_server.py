@@ -39,7 +39,12 @@ def mcp_tool_roteiro():
     request_type = data.get("request", {}).get("type")
     intent_name = data.get("request", {}).get("intent", {}).get("name")
     slots = data.get("request", {}).get("intent", {}).get("slots", {})
-    date_slot = slots.get("data", {}).get("value") if slots.get("data") else None
+    # Aceita tanto 'date' (Alexa padrão) quanto 'data' (personalizado)
+    date_slot = None
+    if slots.get("date") and slots["date"].get("value"):
+        date_slot = slots["date"]["value"]
+    elif slots.get("data") and slots["data"].get("value"):
+        date_slot = slots["data"]["value"]
 
     # Se não informar data, pede para usuário informar
     if not date_slot:
