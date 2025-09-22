@@ -1,326 +1,38 @@
-# Endpoint do roteiro
-@app.route('/mcp/tool/roteiro', methods=['POST'])
-def mcp_tool_roteiro():
-    print("[LOG] Entrou na função mcp_tool_roteiro")
-    try:
-        data = request.get_json(force=True)
-        print("[LOG] JSON recebido da Alexa (roteiro):", data)
-        request_type = data.get("request", {}).get("type")
-        intent_name = data.get("request", {}).get("intent", {}).get("name")
-        slots = data.get("request", {}).get("intent", {}).get("slots", {})
-        dialog_state = data.get("request", {}).get("dialogState")
-        # Aceita tanto 'date' (Alexa padrão) quanto 'data' (personalizado)
-        slot_raw = slots.get('date', {})
-        slot_value = slot_raw.get('value')
-        slot_slotvalue = slot_raw.get('slotValue', {}).get('value') if slot_raw.get('slotValue') else None
-        date_slot = None
-        if slot_value:
-            date_slot = str(slot_value).strip()
-        elif slot_slotvalue:
-            date_slot = str(slot_slotvalue).strip()
-        elif slots.get("data"):
-            if slots["data"].get("value"):
-                date_slot = str(slots["data"]["value"]).strip()
-            elif slots["data"].get("slotValue") and slots["data"]["slotValue"].get("value"):
-                date_slot = str(slots["data"]["slotValue"]["value"]).strip()
-        print(f"[LOG] Intent recebido: {intent_name}")
-        print(f"[LOG] Slot date value: {slot_value}")
-        print(f"[LOG] Slot date slotValue.value: {slot_slotvalue}")
-        print(f"[LOG] dialogState: {dialog_state}")
-        print(f"[LOG] Valor final usado para busca no roteiro: {date_slot}")
-        print(f"[LOG] Checagem Dialog.DelegateRequest: {data.get('request', {}).get('type')}")
-        if data.get("request", {}).get("type") == "Dialog.DelegateRequest":
-            delegate_request = {
-                "version": "1.0",
-                "response": {
-                    "directives": [
-                        {
-                            "type": "Dialog.DelegateRequest",
-                            "target": "skill",
-                            "period": {"until": "EXPLICIT_RETURN"},
-                            "updatedRequest": data["request"].get("updatedRequest", data["request"])
-                        }
-                    ],
-                    "shouldEndSession": False,
-                    "type": "_DEFAULT_RESPONSE"
-                },
-                "sessionAttributes": {}
-            }
-            return jsonify(delegate_request)
-        print(f"[LOG] Checagem RoteiroIntent: intent_name={intent_name}, date_slot={date_slot}")
-        if intent_name and intent_name.strip().lower() == "roteirointent".lower() and date_slot:
-            roteiro = get_roteiro_by_date(date_slot)
-            print(f"[LOG] Roteiro encontrado: {roteiro}")
-            if roteiro:
-                return jsonify({
-                    "version": "1.0",
-                    "response": {
-                        "outputSpeech": {
-                            "type": "PlainText",
-                            "text": roteiro
-                        },
-                        "shouldEndSession": True
-                    }
-                })
-            else:
-                return jsonify({
-                    "version": "1.0",
-                    "response": {
-                        "outputSpeech": {
-                            "type": "PlainText",
-                            "text": "Desculpe, não tenho roteiro para essa data. Diga uma data entre 10 e 25 de outubro de 2025."
-                        },
-                        "shouldEndSession": False
-                    }
-                })
-        print(f"[LOG] Checagem dialogState: dialog_state={dialog_state}")
-        print(f"[LOG] Resultado da busca do roteiro: {roteiro}")
-        if dialog_state != "COMPLETED":
-            print(f"[LOG] Delegando para Alexa. intent_name={intent_name}, date_slot={date_slot}, dialog_state={dialog_state}")
-            delegate_response = {
-                "version": "1.0",
-                "response": {
-                    "directives": [
-                        {
-                            "type": "Dialog.Delegate"
-                        }
-                    ],
-                    "shouldEndSession": False
-                }
-            }
-            return jsonify(delegate_response)
-        # Fallback: resposta padrão para intents desconhecidos ou dados ausentes
-        print(f"[LOG] Fallback acionado. intent_name={intent_name}, date_slot={date_slot}, dialog_state={dialog_state}")
-        alexa_response = {
-            "version": "1.0",
-            "response": {
-                "outputSpeech": {
-                    "type": "PlainText",
-                    "text": f"Desculpe, não entendi o pedido. intent_name={intent_name}, date_slot={date_slot}, dialog_state={dialog_state}"
-                },
-                "shouldEndSession": True
-            }
-        }
-        return jsonify(alexa_response)
-    except Exception as e:
-        print(f"[LOG] Erro inesperado em mcp_tool_roteiro: {e}")
-        alexa_response = {
-            "version": "1.0",
-            "response": {
-                "outputSpeech": {
-                    "type": "PlainText",
-                    "text": f"Erro interno: {e}"
-                },
-                "shouldEndSession": True
-            }
-        }
-        return jsonify(alexa_response)
-# Função utilitária para buscar roteiro por data
-import json
-def get_roteiro_by_date(date_str):
-    try:
-        with open("roteiro.json", "r") as f:
-            print(f"[LOG] get_roteiro_by_date chamada com date: {date_str}")
-            roteiros = json.load(f)
-            print(f"[LOG] roteiros.json carregado: {roteiros}")
-        return roteiros.get(date_str)
-    except Exception as e:
-        print("[LOG] Erro ao ler roteiro.json:", e)
-        return None
-print('[LOG] MCP_SERVER.PY INICIADO')
-
 from flask import Flask, request, jsonify
 from datetime import datetime
 
 app = Flask(__name__)
 
-# Endpoint centralizador para Alexa
-@app.route('/mcp/tool/minha_viagem', methods=['POST'])
-def mcp_tool_minha_viagem():
-    print("[LOG] Entrou na função mcp_tool_minha_viagem")
-    try:
-        data = request.get_json(force=True)
-        print("[LOG] JSON recebido da Alexa (centralizador):", data)
-        # Detecta intent
-        intent_name = None
-        slots = {}
-        dialog_state = None
-        if 'request' in data:
-            req = data['request']
-            intent_name = req.get('intent', {}).get('name')
-            slots = req.get('intent', {}).get('slots', {})
-            dialog_state = req.get('dialogState')
-        print(f"[LOG] Intent detectado: {intent_name}")
-        # Resposta personalizada para LaunchRequest
-        request_type = data.get("request", {}).get("type")
-        if request_type == "LaunchRequest":
-            alexa_response = {
-                "version": "1.0",
-                "response": {
-                    "outputSpeech": {
-                        "type": "PlainText",
-                        "text": "Oi! Me pergunte quantos dias faltam para a viagem ou qual o roteiro."
-                    },
-                    "shouldEndSession": False
-                }
-            }
-            return jsonify(alexa_response)
-        # Roteia para dias_para_viagem
-    if intent_name and intent_name.strip().lower() == "diasparaviagemintent".lower():
-            print("[LOG] Redirecionando para dias_para_viagem")
-            return mcp_tool_dias_para_viagem()
-        # Roteia para roteiro
-        elif intent_name and intent_name.strip().lower() == "roteirointent":
-            print("[LOG] Redirecionando para roteiro")
-            return mcp_tool_roteiro()
-        # Fallback
-        else:
-            print(f"[LOG] Intent não reconhecido: {intent_name}")
-            alexa_response = {
-                "version": "1.0",
-                "response": {
-                    "outputSpeech": {
-                        "type": "PlainText",
-                        "text": "Desculpe, não entendi o pedido."
-                    },
-                    "shouldEndSession": True
-                }
-            }
-            return jsonify(alexa_response)
-    try:
-        data = request.get_json(force=True)
-        print("[LOG] JSON recebido da Alexa (centralizador):", data)
-        # Detecta intent
-        intent_name = None
-        slots = {}
-        dialog_state = None
-        if 'request' in data:
-            req = data['request']
-            intent_name = req.get('intent', {}).get('name')
-            slots = req.get('intent', {}).get('slots', {})
-            dialog_state = req.get('dialogState')
-        print(f"[LOG] Intent detectado: {intent_name}")
-        # Resposta personalizada para LaunchRequest
-        request_type = data.get("request", {}).get("type")
-        if request_type == "LaunchRequest":
-            alexa_response = {
-                "version": "1.0",
-                "response": {
-                    "outputSpeech": {
-                        "type": "PlainText",
-                        "text": "Bem-vindo à Skill Dias para Viagem! Você pode perguntar quantos dias faltam para a viagem ou pedir o roteiro de qualquer dia entre 10 e 25 de outubro de 2025."
-                    },
-                    "shouldEndSession": False
-                }
-            }
-            return jsonify(alexa_response)
-        # Roteia para dias_para_viagem
-        if intent_name and intent_name.strip().lower() == "diasparaviagemintent".lower():
-            print("[LOG] Redirecionando para dias_para_viagem")
-            return mcp_tool_dias_para_viagem()
-        # Roteia para roteiro
-        if intent_name and intent_name.strip().lower() == "roteirointent":
-            print("[LOG] Redirecionando para roteiro")
-            return mcp_tool_roteiro()
-        # Fallback
-        print(f"[LOG] Intent não reconhecido: {intent_name}")
-        alexa_response = {
-            "version": "1.0",
-            "response": {
-                "outputSpeech": {
-                    "type": "PlainText",
-                    "text": "Desculpe, não entendi o pedido."
-                },
-                "shouldEndSession": True
-            }
-        }
-        return jsonify(alexa_response)
-    except Exception as e:
-        print(f"[LOG] Erro inesperado em mcp_tool_minha_viagem: {e}")
-        alexa_response = {
-            "version": "1.0",
-            "response": {
-                "outputSpeech": {
-                    "type": "PlainText",
-                    "text": f"Erro interno: {e}"
-                },
-                "shouldEndSession": True
-            }
-        }
-        return jsonify(alexa_response)
-            }
-            return jsonify(delegate_request)
-        print(f"[LOG] Checagem RoteiroIntent: intent_name={intent_name}, date_slot={date_slot}")
-        if intent_name and intent_name.strip().lower() == "roteirointent".lower() and date_slot:
-            roteiro = get_roteiro_by_date(date_slot)
-            print(f"[LOG] Roteiro encontrado: {roteiro}")
-            if roteiro:
-                return jsonify({
-                    "version": "1.0",
-                    "response": {
-                        "outputSpeech": {
-                            "type": "PlainText",
-                            "text": roteiro
-                        },
-                        "shouldEndSession": True
-                    }
-                })
-            else:
-                return jsonify({
-                    "version": "1.0",
-                    "response": {
-                        "outputSpeech": {
-                            "type": "PlainText",
-                            "text": "Desculpe, não tenho roteiro para essa data. Diga uma data entre 10 e 25 de outubro de 2025."
-                        },
-                        "shouldEndSession": False
-                    }
-                })
-        print(f"[LOG] Checagem dialogState: dialog_state={dialog_state}")
-        print(f"[LOG] Resultado da busca do roteiro: {roteiro}")
-        if dialog_state != "COMPLETED":
-            print(f"[LOG] Delegando para Alexa. intent_name={intent_name}, date_slot={date_slot}, dialog_state={dialog_state}")
-            delegate_response = {
-                "version": "1.0",
-                "response": {
-                    "directives": [
-                        {
-                            "type": "Dialog.Delegate"
-                        }
-                    ],
-                    "shouldEndSession": False
-                }
-            }
-            return jsonify(delegate_response)
-        print(f"[LOG] Fallback acionado. intent_name={intent_name}, date_slot={date_slot}, dialog_state={dialog_state}")
-        alexa_response = {
-            "version": "1.0",
-            "response": {
-                "outputSpeech": {
-                    "type": "PlainText",
-                    "text": f"Desculpe, não entendi o pedido. intent_name={intent_name}, date_slot={date_slot}, dialog_state={dialog_state}"
-                },
-                "shouldEndSession": True
-            }
-        }
-        return jsonify(alexa_response)
-    except Exception as e:
-        print(f"[LOG] Erro inesperado em mcp_tool_roteiro: {e}")
-        alexa_response = {
-            "version": "1.0",
-            "response": {
-                "outputSpeech": {
-                    "type": "PlainText",
-                    "text": f"Erro interno: {e}"
-                },
-                "shouldEndSession": True
-            }
-        }
-        return jsonify(alexa_response)
-
-
+# Endpoint do roteiro
+@app.route('/mcp/tool/roteiro', methods=['POST'])
+def mcp_tool_roteiro():
+    print("[LOG] Entrou na função mcp_tool_roteiro")
+    data = request.get_json(force=True)
+    print("[LOG] JSON recebido da Alexa (roteiro):", data)
+    request_type = data.get("request", {}).get("type")
+    intent_name = data.get("request", {}).get("intent", {}).get("name")
+    slots = data.get("request", {}).get("intent", {}).get("slots", {})
+    dialog_state = data.get("request", {}).get("dialogState")
+    # Aceita tanto 'date' (Alexa padrão) quanto 'data' (personalizado)
+    slot_raw = slots.get('date', {})
+    slot_value = slot_raw.get('value')
+    slot_slotvalue = slot_raw.get('slotValue', {}).get('value') if slot_raw.get('slotValue') else None
+    date_slot = None
+    if slot_value:
+        date_slot = str(slot_value).strip()
+    elif slot_slotvalue:
+        date_slot = str(slot_slotvalue).strip()
+    elif slots.get("data"):
+        if slots["data"].get("value"):
+            date_slot = str(slots["data"]["value"]).strip()
+        elif slots["data"].get("slotValue") and slots["data"]["slotValue"].get("value"):
+            date_slot = str(slots["data"]["slotValue"]["value"]).strip()
+    print(f"[LOG] Intent recebido: {intent_name}")
+    print(f"[LOG] Slot date value: {slot_value}")
+    print(f"[LOG] Slot date slotValue.value: {slot_slotvalue}")
+    print(f"[LOG] dialogState: {dialog_state}")
+    print(f"[LOG] Valor final usado para busca no roteiro: {date_slot}")
     print(f"[LOG] Checagem Dialog.DelegateRequest: {data.get('request', {}).get('type')}")
-    # Suporte ao Dialog.DelegateRequest (Alexa Conversations/APL)
     if data.get("request", {}).get("type") == "Dialog.DelegateRequest":
         delegate_request = {
             "version": "1.0",
@@ -335,13 +47,10 @@ def mcp_tool_minha_viagem():
                 ],
                 "shouldEndSession": False,
                 "type": "_DEFAULT_RESPONSE"
-            },
-            "sessionAttributes": {}
+            }
         }
         return jsonify(delegate_request)
-
     print(f"[LOG] Checagem RoteiroIntent: intent_name={intent_name}, date_slot={date_slot}")
-    # Se for RoteiroIntent (case insensitive) e slot estiver presente, sempre responde com roteiro
     if intent_name and intent_name.strip().lower() == "roteirointent".lower() and date_slot:
         roteiro = get_roteiro_by_date(date_slot)
         print(f"[LOG] Roteiro encontrado: {roteiro}")
@@ -367,9 +76,8 @@ def mcp_tool_minha_viagem():
                     "shouldEndSession": False
                 }
             })
-
     print(f"[LOG] Checagem dialogState: dialog_state={dialog_state}")
-    # Se o diálogo não estiver completo, delega para Alexa continuar
+    print(f"[LOG] Resultado da busca do roteiro: {roteiro}")
     if dialog_state != "COMPLETED":
         print(f"[LOG] Delegando para Alexa. intent_name={intent_name}, date_slot={date_slot}, dialog_state={dialog_state}")
         delegate_response = {
@@ -384,7 +92,6 @@ def mcp_tool_minha_viagem():
             }
         }
         return jsonify(delegate_response)
-
     # Fallback: resposta padrão para intents desconhecidos ou dados ausentes
     print(f"[LOG] Fallback acionado. intent_name={intent_name}, date_slot={date_slot}, dialog_state={dialog_state}")
     alexa_response = {
@@ -398,6 +105,78 @@ def mcp_tool_minha_viagem():
         }
     }
     return jsonify(alexa_response)
+# Função utilitária para buscar roteiro por data
+import json
+def get_roteiro_by_date(date_str):
+    try:
+        with open("roteiro.json", "r") as f:
+            print(f"[LOG] get_roteiro_by_date chamada com date: {date_str}")
+            roteiros = json.load(f)
+            print(f"[LOG] roteiros.json carregado: {roteiros}")
+        return roteiros.get(date_str)
+    except Exception as e:
+        print("[LOG] Erro ao ler roteiro.json:", e)
+        return None
+print('[LOG] MCP_SERVER.PY INICIADO')
+
+from flask import Flask, request, jsonify
+from datetime import datetime
+
+app = Flask(__name__)
+
+# Endpoint centralizador para Alexa
+@app.route('/mcp/tool/minha_viagem', methods=['POST'])
+def mcp_tool_minha_viagem():
+    print("[LOG] Entrou na função mcp_tool_minha_viagem")
+    data = request.get_json(force=True)
+    print("[LOG] JSON recebido da Alexa (centralizador):", data)
+    # Detecta intent
+    intent_name = None
+    slots = {}
+    dialog_state = None
+    if 'request' in data:
+        req = data['request']
+        intent_name = req.get('intent', {}).get('name')
+        slots = req.get('intent', {}).get('slots', {})
+        dialog_state = req.get('dialogState')
+    print(f"[LOG] Intent detectado: {intent_name}")
+    # Resposta personalizada para LaunchRequest
+    request_type = data.get("request", {}).get("type")
+    if request_type == "LaunchRequest":
+        alexa_response = {
+            "version": "1.0",
+            "response": {
+                "outputSpeech": {
+                    "type": "PlainText",
+                    "text": "Oi! Me pergunte quantos dias faltam para a viagem ou qual o roteiro."
+                },
+                "shouldEndSession": False
+            }
+        }
+        return jsonify(alexa_response)
+    # Roteia para dias_para_viagem
+    if intent_name and intent_name.strip().lower() == "diasparaviagemintent".lower():
+        print("[LOG] Redirecionando para dias_para_viagem")
+        return mcp_tool_dias_para_viagem()
+    # Roteia para roteiro
+    elif intent_name and intent_name.strip().lower() == "roteirointent":
+        print("[LOG] Redirecionando para roteiro")
+        return mcp_tool_roteiro()
+    # Fallback
+    else:
+        print(f"[LOG] Intent não reconhecido: {intent_name}")
+        alexa_response = {
+            "version": "1.0",
+            "response": {
+                "outputSpeech": {
+                    "type": "PlainText",
+                    "text": "Desculpe, não entendi o pedido."
+                },
+                "shouldEndSession": True
+            }
+        }
+        return jsonify(alexa_response)
+          
 
 VIAGEM_DATA = datetime(2025, 10, 10)
 
@@ -428,8 +207,9 @@ def mcp_tool_dias_para_viagem():
             "version": "1.0",
             "response": {
                 "outputSpeech": {
-                "type": "PlainText",
-                "text": "Oi! Me pergunte quantos dias faltam para a viagem ou qual o roteiro.",                },
+                    "type": "PlainText",
+                    "text": "Bem-vindo à Skill Dias para Viagem! Você pode perguntar quantos dias faltam para a viagem ou pedir o roteiro de qualquer dia entre 10 e 25 de outubro de 2025."
+                },
                 "shouldEndSession": False
             }
         }
