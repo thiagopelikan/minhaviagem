@@ -162,7 +162,7 @@ def mcp_tool_minha_viagem():
             "response": {
                 "outputSpeech": {
                     "type": "PlainText",
-                    "text": "Até logo!"
+                    "text": "Até logo! Bora pra Disney família!"
                 },
                 "shouldEndSession": True
             }
