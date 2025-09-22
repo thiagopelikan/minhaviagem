@@ -1,3 +1,10 @@
+print('[LOG] MCP_SERVER.PY INICIADO')
+
+from flask import Flask, request, jsonify
+from datetime import datetime
+
+app = Flask(__name__)
+
 # Endpoint centralizador para Alexa
 @app.route('/mcp/tool/minha_viagem', methods=['POST'])
 def mcp_tool_minha_viagem():
