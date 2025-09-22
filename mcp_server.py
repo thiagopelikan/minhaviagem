@@ -116,8 +116,9 @@ def mcp_tool_roteiro():
     intent_name = data.get("request", {}).get("intent", {}).get("name")
     if intent_name == "RoteiroIntent" and date_slot:
         roteiro = get_roteiro_by_date(date_slot)
+        print(f"[LOG] Roteiro encontrado: {roteiro}")
         if roteiro:
-            alexa_response = {
+            return jsonify({
                 "version": "1.0",
                 "response": {
                     "outputSpeech": {
@@ -126,9 +127,9 @@ def mcp_tool_roteiro():
                     },
                     "shouldEndSession": True
                 }
-            }
+            })
         else:
-            alexa_response = {
+            return jsonify({
                 "version": "1.0",
                 "response": {
                     "outputSpeech": {
@@ -137,8 +138,7 @@ def mcp_tool_roteiro():
                     },
                     "shouldEndSession": False
                 }
-            }
-        return jsonify(alexa_response)
+            })
 
     # Fallback: resposta padrão para intents desconhecidos ou dados ausentes
     alexa_response = {
