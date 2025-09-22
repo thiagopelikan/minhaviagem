@@ -34,18 +34,16 @@ def get_roteiro_by_date(date_str):
 # Endpoint do roteiro
 @app.route('/mcp/tool/roteiro', methods=['POST'])
 def mcp_tool_roteiro():
-    # LOG DETALHADO PARA DEPURAÇÃO
+    data = request.get_json(force=True)
+    print("[LOG] JSON recebido da Alexa (roteiro):", data)
+    request_type = data.get("request", {}).get("type")
     intent_name = data.get("request", {}).get("intent", {}).get("name")
+    slots = data.get("request", {}).get("intent", {}).get("slots", {})
+    dialog_state = data.get("request", {}).get("dialogState")
+    # Aceita tanto 'date' (Alexa padrão) quanto 'data' (personalizado)
     slot_raw = slots.get('date', {})
     slot_value = slot_raw.get('value')
     slot_slotvalue = slot_raw.get('slotValue', {}).get('value') if slot_raw.get('slotValue') else None
-    dialog_state = data.get('request', {}).get('dialogState')
-    print(f"[LOG] Intent recebido: {intent_name}")
-    print(f"[LOG] Slot date value: {slot_value}")
-    print(f"[LOG] Slot date slotValue.value: {slot_slotvalue}")
-    print(f"[LOG] dialogState: {dialog_state}")
-
-    # Busca valor do slot em todos os formatos possíveis
     date_slot = None
     if slot_value:
         date_slot = str(slot_value).strip()
@@ -56,26 +54,11 @@ def mcp_tool_roteiro():
             date_slot = str(slots["data"]["value"]).strip()
         elif slots["data"].get("slotValue") and slots["data"]["slotValue"].get("value"):
             date_slot = str(slots["data"]["slotValue"]["value"]).strip()
+    print(f"[LOG] Intent recebido: {intent_name}")
+    print(f"[LOG] Slot date value: {slot_value}")
+    print(f"[LOG] Slot date slotValue.value: {slot_slotvalue}")
+    print(f"[LOG] dialogState: {dialog_state}")
     print(f"[LOG] Valor final usado para busca no roteiro: {date_slot}")
-    data = request.get_json(force=True)
-    print("[LOG] JSON recebido da Alexa (roteiro):", data)
-    request_type = data.get("request", {}).get("type")
-    intent_name = data.get("request", {}).get("intent", {}).get("name")
-    slots = data.get("request", {}).get("intent", {}).get("slots", {})
-    dialog_state = data.get("request", {}).get("dialogState")
-    # Aceita tanto 'date' (Alexa padrão) quanto 'data' (personalizado)
-    date_slot = None
-    # Busca valor do slot em 'value' ou 'slotValue.value', normalizando espaços
-    if slots.get("date"):
-        if slots["date"].get("value"):
-            date_slot = str(slots["date"]["value"]).strip()
-        elif slots["date"].get("slotValue") and slots["date"]["slotValue"].get("value"):
-            date_slot = str(slots["date"]["slotValue"]["value"]).strip()
-    elif slots.get("data"):
-        if slots["data"].get("value"):
-            date_slot = str(slots["data"]["value"]).strip()
-        elif slots["data"].get("slotValue") and slots["data"]["slotValue"].get("value"):
-            date_slot = str(slots["data"]["slotValue"]["value"]).strip()
 
     # Suporte ao Dialog.DelegateRequest (Alexa Conversations/APL)
     if data.get("request", {}).get("type") == "Dialog.DelegateRequest":
@@ -97,23 +80,7 @@ def mcp_tool_roteiro():
         }
         return jsonify(delegate_request)
 
-    # Se o diálogo não estiver completo, delega para Alexa continuar
-    if dialog_state != "COMPLETED":
-        delegate_response = {
-            "version": "1.0",
-            "response": {
-                "directives": [
-                    {
-                        "type": "Dialog.Delegate"
-                    }
-                ],
-                "shouldEndSession": False
-            }
-        }
-        return jsonify(delegate_response)
-
-    # Se informar data e diálogo estiver completo, responde com roteiro (tratando explicitamente o intent)
-    intent_name = data.get("request", {}).get("intent", {}).get("name")
+    # Se for RoteiroIntent e slot estiver presente, sempre responde com roteiro
     if intent_name == "RoteiroIntent" and date_slot:
         roteiro = get_roteiro_by_date(date_slot)
         print(f"[LOG] Roteiro encontrado: {roteiro}")
@@ -139,6 +106,21 @@ def mcp_tool_roteiro():
                     "shouldEndSession": False
                 }
             })
+
+    # Se o diálogo não estiver completo, delega para Alexa continuar
+    if dialog_state != "COMPLETED":
+        delegate_response = {
+            "version": "1.0",
+            "response": {
+                "directives": [
+                    {
+                        "type": "Dialog.Delegate"
+                    }
+                ],
+                "shouldEndSession": False
+            }
+        }
+        return jsonify(delegate_response)
 
     # Fallback: resposta padrão para intents desconhecidos ou dados ausentes
     alexa_response = {
