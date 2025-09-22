@@ -39,6 +39,7 @@ def mcp_tool_roteiro():
     request_type = data.get("request", {}).get("type")
     intent_name = data.get("request", {}).get("intent", {}).get("name")
     slots = data.get("request", {}).get("intent", {}).get("slots", {})
+    dialog_state = data.get("request", {}).get("dialogState")
     # Aceita tanto 'date' (Alexa padrão) quanto 'data' (personalizado)
     date_slot = None
     if slots.get("date") and slots["date"].get("value"):
@@ -46,43 +47,59 @@ def mcp_tool_roteiro():
     elif slots.get("data") and slots["data"].get("value"):
         date_slot = slots["data"]["value"]
 
-    # Se não informar data, pede para usuário informar
-    if not date_slot:
-        alexa_response = {
+    # Se o diálogo não estiver completo, delega para Alexa continuar
+    if dialog_state != "COMPLETED":
+        delegate_response = {
             "version": "1.0",
             "response": {
-                "outputSpeech": {
-                    "type": "PlainText",
-                    "text": "Qual data da viagem você gostaria de saber o roteiro? Diga uma data entre 10 e 25 de outubro de 2025."
-                },
+                "directives": [
+                    {
+                        "type": "Dialog.Delegate"
+                    }
+                ],
                 "shouldEndSession": False
             }
         }
+        return jsonify(delegate_response)
+
+    # Se informar data e diálogo estiver completo, responde com roteiro
+    if date_slot:
+        roteiro = get_roteiro_by_date(date_slot)
+        if roteiro:
+            alexa_response = {
+                "version": "1.0",
+                "response": {
+                    "outputSpeech": {
+                        "type": "PlainText",
+                        "text": roteiro
+                    },
+                    "shouldEndSession": True
+                }
+            }
+        else:
+            alexa_response = {
+                "version": "1.0",
+                "response": {
+                    "outputSpeech": {
+                        "type": "PlainText",
+                        "text": "Desculpe, não tenho roteiro para essa data. Diga uma data entre 10 e 25 de outubro de 2025."
+                    },
+                    "shouldEndSession": False
+                }
+            }
         return jsonify(alexa_response)
 
-    roteiro = get_roteiro_by_date(date_slot)
-    if roteiro:
-        alexa_response = {
-            "version": "1.0",
-            "response": {
-                "outputSpeech": {
-                    "type": "PlainText",
-                    "text": roteiro
-                },
-                "shouldEndSession": True
-            }
+    # Fallback: pede para informar data
+    alexa_response = {
+        "version": "1.0",
+        "response": {
+            "outputSpeech": {
+                "type": "PlainText",
+                "text": "Qual data da viagem você gostaria de saber o roteiro? Diga uma data entre 10 e 25 de outubro de 2025."
+            },
+            "shouldEndSession": False
         }
-    else:
-        alexa_response = {
-            "version": "1.0",
-            "response": {
-                "outputSpeech": {
-                    "type": "PlainText",
-                    "text": "Desculpe, não tenho roteiro para essa data. Diga uma data entre 10 e 25 de outubro de 2025."
-                },
-                "shouldEndSession": False
-            }
-        }
+    }
     return jsonify(alexa_response)
 
 VIAGEM_DATA = datetime(2025, 10, 10)
