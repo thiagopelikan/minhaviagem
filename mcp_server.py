@@ -1,3 +1,15 @@
+# Função utilitária para buscar roteiro por data
+import json
+def get_roteiro_by_date(date_str):
+    try:
+        with open("roteiro.json", "r") as f:
+            print(f"[LOG] get_roteiro_by_date chamada com date: {date_str}")
+            roteiros = json.load(f)
+            print(f"[LOG] roteiros.json carregado: {roteiros}")
+        return roteiros.get(date_str)
+    except Exception as e:
+        print("[LOG] Erro ao ler roteiro.json:", e)
+        return None
 print('[LOG] MCP_SERVER.PY INICIADO')
 
 from flask import Flask, request, jsonify
@@ -23,9 +35,8 @@ def mcp_tool_minha_viagem():
             dialog_state = req.get('dialogState')
         print(f"[LOG] Intent detectado: {intent_name}")
         # Roteia para dias_para_viagem
-        if intent_name and intent_name.strip().lower() == "dias_para_viagem":
+        if intent_name and intent_name.strip().lower() == "diasparaviagem":
             print("[LOG] Redirecionando para dias_para_viagem")
-            # Reaproveita função existente
             return mcp_tool_dias_para_viagem()
         # Roteia para roteiro
         elif intent_name and intent_name.strip().lower() == "roteirointent":
@@ -58,41 +69,6 @@ def mcp_tool_minha_viagem():
             }
         }
         return jsonify(alexa_response)
-print('[LOG] MCP_SERVER.PY INICIADO')
-
-from flask import Flask, request, jsonify
-from datetime import datetime
-
-app = Flask(__name__)
-
-# Lista de tools MCP disponíveis
-MCP_TOOLS = [
-    {
-        "name": "dias_para_viagem",
-        "description": "Retorna quantos dias faltam para a viagem (10/10/2025)",
-        "endpoint": "/mcp/tool/dias_para_viagem",
-        "method": "POST"
-    },
-    {
-        "name": "roteiro",
-        "description": "Retorna o roteiro do dia informado (de 10/10/2025 a 25/10/2025)",
-        "endpoint": "/mcp/tool/roteiro",
-        "method": "POST"
-    }
-]
-# Novo endpoint para listar as tools MCP
-import json
-
-def get_roteiro_by_date(date_str):
-    try:
-        with open("roteiro.json", "r") as f:
-                print(f"[LOG] get_roteiro_by_date chamada com date: {date_str}")
-                roteiros = json.load(f)
-                print(f"[LOG] roteiros.json carregado: {roteiros}")
-        return roteiros.get(date_str)
-    except Exception as e:
-        print("[LOG] Erro ao ler roteiro.json:", e)
-        return None
 
 # Endpoint do roteiro
 @app.route('/mcp/tool/roteiro', methods=['POST'])
@@ -358,7 +334,7 @@ def mcp_tool_dias_para_viagem():
 # Novo endpoint para listar as tools MCP
 @app.route('/mcp/tools', methods=['GET'])
 def listar_tools_mcp():
-    return jsonify({"tools": MCP_TOOLS})
+    return jsonify({"tools": []})
 
 if __name__ == '__main__':
     import os
