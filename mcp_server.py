@@ -47,6 +47,26 @@ def mcp_tool_roteiro():
     elif slots.get("data") and slots["data"].get("value"):
         date_slot = slots["data"]["value"]
 
+    # Suporte ao Dialog.DelegateRequest (Alexa Conversations/APL)
+    if data.get("request", {}).get("type") == "Dialog.DelegateRequest":
+        delegate_request = {
+            "version": "1.0",
+            "response": {
+                "directives": [
+                    {
+                        "type": "Dialog.DelegateRequest",
+                        "target": "skill",
+                        "period": {"until": "EXPLICIT_RETURN"},
+                        "updatedRequest": data["request"].get("updatedRequest", data["request"])
+                    }
+                ],
+                "shouldEndSession": False,
+                "type": "_DEFAULT_RESPONSE"
+            },
+            "sessionAttributes": {}
+        }
+        return jsonify(delegate_request)
+
     # Se o diálogo não estiver completo, delega para Alexa continuar
     if dialog_state != "COMPLETED":
         delegate_response = {
