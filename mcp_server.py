@@ -36,9 +36,27 @@ def get_roteiro_by_date(date_str):
 def mcp_tool_roteiro():
     # LOG DETALHADO PARA DEPURAÇÃO
     intent_name = data.get("request", {}).get("intent", {}).get("name")
+    slot_raw = slots.get('date', {})
+    slot_value = slot_raw.get('value')
+    slot_slotvalue = slot_raw.get('slotValue', {}).get('value') if slot_raw.get('slotValue') else None
+    dialog_state = data.get('request', {}).get('dialogState')
     print(f"[LOG] Intent recebido: {intent_name}")
-    print(f"[LOG] Slot date: {slots.get('date', {}).get('value')}")
-    print(f"[LOG] dialogState: {data.get('request', {}).get('dialogState')}")
+    print(f"[LOG] Slot date value: {slot_value}")
+    print(f"[LOG] Slot date slotValue.value: {slot_slotvalue}")
+    print(f"[LOG] dialogState: {dialog_state}")
+
+    # Busca valor do slot em todos os formatos possíveis
+    date_slot = None
+    if slot_value:
+        date_slot = str(slot_value).strip()
+    elif slot_slotvalue:
+        date_slot = str(slot_slotvalue).strip()
+    elif slots.get("data"):
+        if slots["data"].get("value"):
+            date_slot = str(slots["data"]["value"]).strip()
+        elif slots["data"].get("slotValue") and slots["data"]["slotValue"].get("value"):
+            date_slot = str(slots["data"]["slotValue"]["value"]).strip()
+    print(f"[LOG] Valor final usado para busca no roteiro: {date_slot}")
     data = request.get_json(force=True)
     print("[LOG] JSON recebido da Alexa (roteiro):", data)
     request_type = data.get("request", {}).get("type")
