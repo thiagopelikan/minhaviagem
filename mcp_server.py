@@ -154,14 +154,35 @@ def mcp_tool_minha_viagem():
             }
         }
         return jsonify(alexa_response)
+    # Roteia para intent de saída
+    if intent_name and intent_name.strip().lower() == "sairintent":
+        print("[LOG] Intent de saída detectado")
+        alexa_response = {
+            "version": "1.0",
+            "response": {
+                "outputSpeech": {
+                    "type": "PlainText",
+                    "text": "Até logo!"
+                },
+                "shouldEndSession": True
+            }
+        }
+        return jsonify(alexa_response)
     # Roteia para dias_para_viagem
     if intent_name and intent_name.strip().lower() == "diasparaviagemintent".lower():
         print("[LOG] Redirecionando para dias_para_viagem")
-        return mcp_tool_dias_para_viagem()
+        resposta = mcp_tool_dias_para_viagem()
+        # Força shouldEndSession=False
+        resp_json = resposta.get_json()
+        resp_json["response"]["shouldEndSession"] = False
+        return jsonify(resp_json)
     # Roteia para roteiro
     elif intent_name and intent_name.strip().lower() == "roteirointent":
         print("[LOG] Redirecionando para roteiro")
-        return mcp_tool_roteiro()
+        resposta = mcp_tool_roteiro()
+        resp_json = resposta.get_json()
+        resp_json["response"]["shouldEndSession"] = False
+        return jsonify(resp_json)
     # Fallback
     else:
         print(f"[LOG] Intent não reconhecido: {intent_name}")
@@ -172,7 +193,7 @@ def mcp_tool_minha_viagem():
                     "type": "PlainText",
                     "text": "Desculpe, não entendi o pedido."
                 },
-                "shouldEndSession": True
+                "shouldEndSession": False
             }
         }
         return jsonify(alexa_response)
